@@ -325,7 +325,7 @@
     <div class="panel">
       <div class="section">
         <h1 class="title">Générateur de mails HTML Bati Azur</h1>
-        <p class="subtitle">Version simple à ouvrir dans Chrome. Couleurs alignées sur la charte, génération de boutons Google Drive, copie du message pour collage direct dans Gmail, assistant de rédaction local et blocs type newsletter.</p>
+        <p class="subtitle">Version simple à ouvrir dans Chrome. Couleurs alignées sur la charte, génération de boutons Google Drive, copie du message pour collage direct dans Gmail, assistant IA via Cloudflare Worker et blocs type newsletter.</p>
         <div class="palette">
           <div class="swatch"><span class="swatch-dot" style="background:#FDFAEF"></span>FDFAEF</div>
           <div class="swatch"><span class="swatch-dot" style="background:#5284CB"></span>5284CB</div>
@@ -386,7 +386,7 @@
       </div>
 
       <div class="section">
-        <h2>2. Assistant texte</h2>
+        <h2>2. Assistant texte IA</h2>
         <div class="assistant-box">
           <div class="grid-2">
             <div>
@@ -411,15 +411,34 @@
               </select>
             </div>
           </div>
+
           <div style="margin-top:12px;">
             <label for="assistantPrompt">Consignes / éléments à intégrer</label>
             <textarea id="assistantPrompt">Dire que c'est la facture de la remise en route et du changement de sable, et que je joins la documentation du système de commande à distance avec le Pool Command et le flotteur d’analyse.</textarea>
           </div>
+
+          <div class="grid-2" style="margin-top:12px;">
+            <div>
+              <label for="aiMode">Mode de génération</label>
+              <select id="aiMode">
+                <option value="openai" selected>OpenAI via Worker</option>
+                <option value="local">Assistant local</option>
+              </select>
+            </div>
+            <div>
+              <label for="workerUrl">URL du Worker IA</label>
+              <input id="workerUrl" value="https://mail-generator-ai.batiazur-mail.workers.dev" />
+            </div>
+          </div>
+
           <div class="actions" style="margin-top:12px;">
-            <button class="btn-primary" onclick="generateTextFromAssistant()">Générer le texte</button>
+            <button class="btn-primary" id="generateAiBtn" onclick="generateTextFromAssistant(event)">Générer le texte</button>
             <button class="btn-secondary" onclick="insertGreeting()">Ajouter une formule d’appel</button>
           </div>
-          <div class="hint">Cette version embarque un assistant de rédaction local basé sur des modèles intelligents. Pour une vraie IA complète, on pourra ensuite brancher l’API OpenAI avec ta clé.</div>
+
+          <div class="hint">
+            Le mode OpenAI est activé par défaut. La clé API reste cachée côté Cloudflare Worker.
+          </div>
         </div>
       </div>
 
@@ -1000,14 +1019,16 @@ BÂTI AZUR</textarea>
       })).filter(b => b.title || b.text || b.imageUrl || b.button1Label || b.button2Label);
     }
 
-    function generateTextFromAssistant() {
+    function generateLocalAssistantText() {
       const clientName = document.getElementById('clientName').value.trim();
       const tone = document.getElementById('mailTone').value;
       const context = document.getElementById('mailContext').value;
       const prompt = document.getElementById('assistantPrompt').value.trim();
       const docs = getDocuments().map(d => d.label.replace(/^Télécharger\s+/i, '')).filter(Boolean);
 
-      const greeting = clientName ? `Bonjour Monsieur ${clientName.replace(/^Monsieur\s+/i, '').replace(/^Madame\s+/i, '')},` : 'Bonjour,';
+      const greeting = clientName
+        ? `Bonjour Monsieur ${clientName.replace(/^Monsieur\s+/i, '').replace(/^Madame\s+/i, '')},`
+        : 'Bonjour,';
 
       let intro = '';
       let body = '';
@@ -1015,10 +1036,14 @@ BÂTI AZUR</textarea>
 
       if (context === 'facture') {
         intro = 'Veuillez trouver ci-joint la facture relative à votre dossier.';
-        body = docs.length ? `Nous vous transmettons également les documents suivants : ${docs.join(', ')}.` : 'Nous vous transmettons également les éléments complémentaires utiles à votre installation.';
+        body = docs.length
+          ? `Nous vous transmettons également les documents suivants : ${docs.join(', ')}.`
+          : 'Nous vous transmettons également les éléments complémentaires utiles à votre installation.';
       } else if (context === 'devis') {
         intro = 'Veuillez trouver ci-joint notre devis relatif à votre projet.';
-        body = docs.length ? `Vous retrouverez également les documents suivants : ${docs.join(', ')}.` : 'Vous retrouverez également la documentation utile concernant les équipements évoqués.';
+        body = docs.length
+          ? `Vous retrouverez également les documents suivants : ${docs.join(', ')}.`
+          : 'Vous retrouverez également la documentation utile concernant les équipements évoqués.';
       } else if (context === 'relance') {
         intro = 'Nous revenons vers vous concernant notre précédent envoi.';
         body = 'Sauf erreur de notre part, nous restons dans l’attente de votre retour.';
@@ -1027,13 +1052,19 @@ BÂTI AZUR</textarea>
         body = 'Vous trouverez ci-dessous les éléments utiles relatifs à votre demande.';
       } else if (context === 'documents') {
         intro = 'Veuillez trouver ci-joint les documents demandés.';
-        body = docs.length ? `Vous pouvez retrouver les documents suivants : ${docs.join(', ')}.` : 'Nous vous transmettons ci-joint les éléments utiles à votre dossier.';
+        body = docs.length
+          ? `Vous pouvez retrouver les documents suivants : ${docs.join(', ')}.`
+          : 'Nous vous transmettons ci-joint les éléments utiles à votre dossier.';
       } else if (context === 'info') {
         intro = 'Nous vous contactons afin de vous transmettre une information utile concernant votre installation.';
-        body = docs.length ? `Vous pouvez également consulter les documents suivants : ${docs.join(', ')}.` : 'Vous trouverez ci-dessous les éléments utiles.';
+        body = docs.length
+          ? `Vous pouvez également consulter les documents suivants : ${docs.join(', ')}.`
+          : 'Vous trouverez ci-dessous les éléments utiles.';
       } else {
         intro = 'Nous vous adressons ce message afin de vous transmettre les éléments utiles relatifs à votre installation.';
-        body = docs.length ? `Vous pouvez retrouver les documents suivants : ${docs.join(', ')}.` : 'Vous trouverez ci-dessous les éléments utiles.';
+        body = docs.length
+          ? `Vous pouvez retrouver les documents suivants : ${docs.join(', ')}.`
+          : 'Vous trouverez ci-dessous les éléments utiles.';
       }
 
       if (tone === 'premium') {
@@ -1047,9 +1078,74 @@ BÂTI AZUR</textarea>
       }
 
       const extra = prompt ? `\n\n${prompt.charAt(0).toUpperCase() + prompt.slice(1)}` : '';
-      const finalText = `${greeting}\n\n${intro}\n\n${body}${extra}\n\n${ending}\n\nCordialement,\nBÂTI AZUR`;
-      document.getElementById('bodyText').value = finalText;
-      refreshPreview();
+      return `${greeting}\n\n${intro}\n\n${body}${extra}\n\n${ending}\n\nCordialement,\nBÂTI AZUR`;
+    }
+
+    async function generateTextFromAssistant(evt) {
+      const mode = document.getElementById('aiMode').value;
+      const button = evt?.currentTarget || document.getElementById('generateAiBtn');
+      const oldText = button ? button.textContent : 'Générer le texte';
+
+      if (button) {
+        button.disabled = true;
+        button.textContent = 'Génération...';
+      }
+
+      try {
+        if (mode === 'local') {
+          document.getElementById('bodyText').value = generateLocalAssistantText();
+          refreshPreview();
+          return;
+        }
+
+        const workerUrl = document.getElementById('workerUrl').value.trim();
+        if (!workerUrl) {
+          alert("Renseigne l’URL du Worker IA.");
+          return;
+        }
+
+        const clientName = document.getElementById('clientName').value.trim();
+        const tone = document.getElementById('mailTone').value;
+        const context = document.getElementById('mailContext').value;
+        const prompt = document.getElementById('assistantPrompt').value.trim();
+        const docs = getDocuments().map(d => d.label.replace(/^Télécharger\s+/i, '')).filter(Boolean);
+
+        const response = await fetch(workerUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            clientName,
+            tone,
+            context,
+            prompt,
+            documents: docs
+          })
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'Erreur Worker');
+        }
+
+        const data = await response.json();
+
+        if (!data.text || !data.text.trim()) {
+          throw new Error('Réponse IA vide');
+        }
+
+        document.getElementById('bodyText').value = data.text.trim();
+        refreshPreview();
+      } catch (error) {
+        console.error(error);
+        alert("Impossible de générer le texte via OpenAI. Vérifie l’URL du Worker et la clé API côté Worker.");
+      } finally {
+        if (button) {
+          button.disabled = false;
+          button.textContent = oldText;
+        }
+      }
     }
 
     function insertGreeting() {
@@ -1246,7 +1342,9 @@ BÂTI AZUR</textarea>
       'calendarStartTime',
       'calendarEndTime',
       'calendarDescription',
-      'calendarPageUrl'
+      'calendarPageUrl',
+      'aiMode',
+      'workerUrl'
     ].forEach(id => {
       const el = document.getElementById(id);
       if (el) {
