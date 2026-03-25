@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ajout à l’agenda</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #FDFAEF;
+      color: #22324a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+    }
+    .card {
+      max-width: 560px;
+      background: #ffffff;
+      border: 1px solid #d9dfeb;
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: 0 12px 28px rgba(62, 99, 152, 0.12);
+    }
+    .btn {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 14px 22px;
+      background: #3E6398;
+      color: #fff;
+      text-decoration: none;
+      border-radius: 10px;
+      font-weight: 700;
+    }
+    .muted {
+      color: #66758a;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1 style="margin-top:0;">Ajout du rendez-vous à votre agenda</h1>
+    <p class="muted" id="statusText">Préparation du fichier calendrier...</p>
+    <a id="manualLink" class="btn" href="#" download="rendez-vous-bati-azur.ics" style="display:none;">
+      Télécharger l’événement
+    </a>
+  </div>
+
+  <script>
+    function pad(n) {
+      return String(n).padStart(2, '0');
+    }
+
+    function toUtcStamp(dateStr, timeStr) {
+      const [year, month, day] = dateStr.split('-').map(Number);
+      const [hours, minutes] = timeStr.split(':').map(Number);
+      const localDate = new Date(year, month - 1, day, hours, minutes, 0);
+      return (
+        localDate.getUTCFullYear().toString() +
+        pad(localDate.getUTCMonth() + 1) +
+        pad(localDate.getUTCDate()) + 'T' +
+        pad(localDate.getUTCHours()) +
+        pad(localDate.getUTCMinutes()) +
+        pad(localDate.getUTCSeconds()) + 'Z'
+      );
+    }
+
+    function escapeIcsText(str = '') {
+      return String(str)
+        .replace(/\\/g, '\\\\')
+        .replace(/\n/g, '\\n')
+        .replace(/,/g, '\\,')
+        .replace(/;/g, '\\;');
+    }
+
+    function buildIcsContent({ title, location, date, start, end, description }) {
+      const uid = `rdv-${Date.now()}@batiazur`;
+      const dtStamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+
+      const dtStart = toUtcStamp(date, start);
+      const dtEnd = toUtcStamp(date, end);
+
+      return [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//Bati Azur Piscine//Agenda//FR',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH',
+        'BEGIN:VEVENT',
+        `UID:${uid}`,
+        `DTSTAMP:${dtStamp}`,
+        `DTSTART:${dtStart}`,
+        `DTEND:${dtEnd}`,
+        `SUMMARY:${escapeIcsText(title)}`,
+        `DESCRIPTION:${escapeIcsText(description)}`,
+        `LOCATION:${escapeIcsText(location)}`,
+        'STATUS:CONFIRMED',
+        'SEQUENCE:0',
+        'END:VEVENT',
+        'END:VCALENDAR'
+      ].join('\r\n');
+    }
+
+    function downloadIcs(content, fileName) {
+      const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      const manualLink = document.getElementById('manualLink');
+      manualLink.href = url;
+      manualLink.download = fileName;
+      manualLink.style.display = 'inline-block';
+
+      document.getElementById('statusText').textContent =
+        'Le téléchargement a démarré. Si rien ne se passe, utilisez le bouton ci-dessous.';
+    }
+
+    (function init() {
+      const params = new URLSearchParams(window.location.search);
+
+      const title = params.get('title') || 'Rendez-vous Bâti Azur Piscine';
+      const location = params.get('location') || '';
+      const date = params.get('date') || '';
+      const start = params.get('start') || '';
+      const end = params.get('end') || '';
+      const description = params.get('description') || '';
+
+      if (!date || !start || !end) {
+        document.getElementById('statusText').textContent =
+          'Informations du rendez-vous incomplètes.';
+        return;
+      }
+
+      const safeFileName = 'rendez-vous-bati-azur.ics';
+      const icsContent = buildIcsContent({ title, location, date, start, end, description });
+
+      downloadIcs(icsContent, safeFileName);
+    })();
+  </script>
+</body>
+</html>
