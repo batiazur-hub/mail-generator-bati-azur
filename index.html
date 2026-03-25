@@ -185,7 +185,7 @@
       line-height: 1.6;
     }
 
-    .doc-item, .image-item, .block-item, .calendar-box {
+    .doc-item, .image-item, .block-item, .calendar-box, .template-box {
       border: 1px solid var(--border);
       background: #fff;
       border-radius: 18px;
@@ -313,6 +313,12 @@
       margin-bottom: 0;
     }
 
+    .template-status {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
     @media (max-width: 1080px) {
       .app { grid-template-columns: 1fr; }
       .preview-frame { height: 70vh; }
@@ -325,12 +331,45 @@
     <div class="panel">
       <div class="section">
         <h1 class="title">Générateur de mails HTML Bati Azur</h1>
-        <p class="subtitle">Version simple à ouvrir dans Chrome. Couleurs alignées sur la charte, génération de boutons Google Drive, copie du message pour collage direct dans Gmail, assistant IA via Cloudflare Worker et blocs type newsletter.</p>
+        <p class="subtitle">Version simple à ouvrir dans Chrome. Couleurs alignées sur la charte, génération de boutons Google Drive, copie du message pour collage direct dans Gmail, assistant IA via Cloudflare Worker, blocs type newsletter et gestion de templates.</p>
         <div class="palette">
           <div class="swatch"><span class="swatch-dot" style="background:#FDFAEF"></span>FDFAEF</div>
           <div class="swatch"><span class="swatch-dot" style="background:#5284CB"></span>5284CB</div>
           <div class="swatch"><span class="swatch-dot" style="background:#FFBE00"></span>FFBE00</div>
           <div class="swatch"><span class="swatch-dot" style="background:#3E6398"></span>3E6398</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>0. Templates</h2>
+        <div class="template-box">
+          <div class="grid-3">
+            <div>
+              <label for="templateSelect">Bibliothèque</label>
+              <select id="templateSelect">
+                <option value="">Choisir un template</option>
+              </select>
+            </div>
+            <div>
+              <label for="templateNameInput">Nom du template</label>
+              <input id="templateNameInput" placeholder="Ex. Livraison coque standard" />
+            </div>
+            <div>
+              <label for="templateMode">Type d’enregistrement</label>
+              <select id="templateMode">
+                <option value="form" selected>Enregistrer la configuration du générateur</option>
+                <option value="html">Enregistrer le HTML généré</option>
+              </select>
+            </div>
+          </div>
+          <div class="actions" style="margin-top:12px;">
+            <button class="btn-primary" id="loadTemplateBtn" type="button">Charger le template</button>
+            <button class="btn-secondary" id="saveTemplateBtn" type="button">Enregistrer le template actuel</button>
+            <button class="btn-secondary" id="duplicateTemplateBtn" type="button">Dupliquer le template sélectionné</button>
+            <button class="btn-danger" id="deleteTemplateBtn" type="button">Supprimer</button>
+          </div>
+          <div class="hint">Un template peut mémoriser tout le formulaire du générateur, ce qui est le plus pratique. Le mode HTML enregistre uniquement le rendu final.</div>
+          <div id="templateStatus" class="template-status"></div>
         </div>
       </div>
 
@@ -569,6 +608,9 @@ BÂTI AZUR</textarea>
   </div>
 
   <script>
+    const STORAGE_TEMPLATE_KEY = 'bati_azur_mail_templates_v2';
+    const STORAGE_LAST_STATE_KEY = 'bati_azur_mail_generator_last_state_v2';
+
     const defaultDocs = [
       {
         label: 'Télécharger la facture',
@@ -599,6 +641,73 @@ BÂTI AZUR</textarea>
       yellow: '#FFBE00',
       darkblue: '#3E6398'
     };
+
+    const builtInTemplates = [
+      {
+        id: 'builtin-delivery-date',
+        type: 'builtin',
+        mode: 'form',
+        name: 'Livraison de la coque',
+        state: {
+          subject: 'Nous avons la date de livraison de votre piscine',
+          previewText: 'Votre piscine arrive le 23 Avril',
+          heroTitle: 'Votre piscine arrive',
+          clientName: 'Monsieur',
+          themeStyle: 'premium',
+          logoUrl: 'https://batiazur-hub.github.io/mail-generator-bati-azur/logo.png',
+          showLogo: 'yes',
+          mailTone: 'pro',
+          mailContext: 'info',
+          assistantPrompt: 'Informer le client de la date et de la plage horaire de livraison de la coque.',
+          aiMode: 'openai',
+          workerUrl: 'https://mail-generator-ai.batiazur-mail.workers.dev',
+          bodyText: 'Bonjour Monsieur ,\n\nNous vous contactons afin de vous informer que votre coque sera livré le XX Mois (à partir de Xh)\n\nCordialement',
+          enableCalendarBlock: true,
+          calendarTitle: 'Livraison de la coque',
+          calendarLocation: '',
+          calendarDate: '2026-01-01',
+          calendarStartTime: '00:00',
+          calendarEndTime: '00:00',
+          calendarDescription: '',
+          calendarPageUrl: 'https://batiazur-hub.github.io/mail-generator-bati-azur/calendar-download.html',
+          contentBlocks: [],
+          documents: [],
+          images: []
+        }
+      },
+      {
+        id: 'builtin-facture-docs',
+        type: 'builtin',
+        mode: 'form',
+        name: 'Facture + documentation',
+        state: {
+          subject: 'Facture remise en route et remplacement du sable + documentation commande à distance',
+          previewText: 'Facture de remise en route et documentation sur le système de pilotage à distance de votre piscine.',
+          heroTitle: 'Envoi de votre facture et documentation complémentaire',
+          clientName: 'Luc Beaunée',
+          themeStyle: 'premium',
+          logoUrl: 'https://batiazur-hub.github.io/mail-generator-bati-azur/logo.png',
+          showLogo: 'yes',
+          mailTone: 'pro',
+          mailContext: 'facture',
+          assistantPrompt: 'Dire que c\'est la facture de la remise en route et du changement de sable, et que je joins la documentation du système de commande à distance avec le Pool Command et le flotteur d’analyse.',
+          aiMode: 'openai',
+          workerUrl: 'https://mail-generator-ai.batiazur-mail.workers.dev',
+          bodyText: 'Bonjour Monsieur Beaunée,\n\nVeuillez trouver ci-joint la facture concernant la remise en route de votre piscine ainsi que le remplacement du sable.\n\nNous vous transmettons également la documentation relative au système de commande de la piscine à distance, permettant un pilotage plus simple, plus confortable et un meilleur suivi de votre installation.\n\nNous restons bien entendu à votre disposition pour toute question concernant cette facture ou les solutions de commande à distance pour votre piscine.\n\nCordialement,\nBÂTI AZUR',
+          enableCalendarBlock: false,
+          calendarTitle: 'Rendez-vous Bâti Azur Piscine',
+          calendarLocation: '',
+          calendarDate: '',
+          calendarStartTime: '',
+          calendarEndTime: '',
+          calendarDescription: '',
+          calendarPageUrl: 'https://batiazur-hub.github.io/mail-generator-bati-azur/calendar-download.html',
+          contentBlocks: [],
+          documents: defaultDocs,
+          images: []
+        }
+      }
+    ];
 
     function escapeHtml(str = '') {
       return String(str)
@@ -929,7 +1038,7 @@ BÂTI AZUR</textarea>
       refreshPreview();
     }
 
-    function addImageItem() {
+    function addImageItem(image = { url: '', alt: 'Illustration' }) {
       const container = document.getElementById('images');
       const wrapper = document.createElement('div');
       wrapper.className = 'image-item';
@@ -941,11 +1050,11 @@ BÂTI AZUR</textarea>
         <div class="grid-2">
           <div>
             <label>URL publique HTTPS</label>
-            <input class="img-url" placeholder="https://.../image.jpg">
+            <input class="img-url" value="${escapeHtml(image.url || '')}" placeholder="https://.../image.jpg">
           </div>
           <div>
             <label>Texte alternatif</label>
-            <input class="img-alt" value="Illustration">
+            <input class="img-alt" value="${escapeHtml(image.alt || 'Illustration')}">
           </div>
         </div>
         <div class="grid-2" style="margin-top:12px; align-items:end;">
@@ -954,7 +1063,7 @@ BÂTI AZUR</textarea>
             <input type="file" class="img-file" accept="image/*">
           </div>
           <div>
-            <img class="upload-preview" style="display:none;" alt="aperçu image" />
+            <img class="upload-preview" style="display:${image.url ? 'block' : 'none'};" ${image.url ? `src="${escapeHtml(image.url)}"` : ''} alt="aperçu image" />
           </div>
         </div>
       `;
@@ -991,11 +1100,9 @@ BÂTI AZUR</textarea>
       return Array.from(document.querySelectorAll('.doc-item')).map(item => ({
         label: item.querySelector('.doc-label').value.trim(),
         url: item.querySelector('.doc-url').value.trim(),
-        color: resolveColor(
-          item.querySelector('.doc-color-mode').value,
-          item.querySelector('.doc-color-preset').value,
-          item.querySelector('.doc-color-custom').value
-        )
+        colorMode: item.querySelector('.doc-color-mode').value,
+        color: item.querySelector('.doc-color-preset').value,
+        customColor: item.querySelector('.doc-color-custom').value
       })).filter(d => d.label || d.url);
     }
 
@@ -1160,11 +1267,12 @@ BÂTI AZUR</textarea>
 
     function buildButtonsHtml(documents) {
       return documents.map(doc => {
-        const textColor = getButtonTextColor(doc.color);
+        const bgColor = resolveColor(doc.colorMode, doc.color, doc.customColor);
+        const textColor = getButtonTextColor(bgColor);
         return `
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px 0;">
           <tr>
-            <td align="center" bgcolor="${doc.color}" style="border-radius:12px;">
+            <td align="center" bgcolor="${bgColor}" style="border-radius:12px;">
               <a href="${escapeHtml(doc.url)}" target="_blank" style="display:inline-block; padding:15px 24px; font-size:15px; font-weight:700; color:${textColor}; text-decoration:none; border-radius:12px;">${escapeHtml(doc.label)}</a>
             </td>
           </tr>
@@ -1271,10 +1379,286 @@ BÂTI AZUR</textarea>
 </html>`;
     }
 
+    function getFormState() {
+      return {
+        subject: document.getElementById('subject').value,
+        previewText: document.getElementById('previewText').value,
+        heroTitle: document.getElementById('heroTitle').value,
+        clientName: document.getElementById('clientName').value,
+        themeStyle: document.getElementById('themeStyle').value,
+        logoUrl: document.getElementById('logoUrl').value,
+        showLogo: document.getElementById('showLogo').value,
+        mailTone: document.getElementById('mailTone').value,
+        mailContext: document.getElementById('mailContext').value,
+        assistantPrompt: document.getElementById('assistantPrompt').value,
+        aiMode: document.getElementById('aiMode').value,
+        workerUrl: document.getElementById('workerUrl').value,
+        bodyText: document.getElementById('bodyText').value,
+        enableCalendarBlock: document.getElementById('enableCalendarBlock').checked,
+        calendarTitle: document.getElementById('calendarTitle').value,
+        calendarLocation: document.getElementById('calendarLocation').value,
+        calendarDate: document.getElementById('calendarDate').value,
+        calendarStartTime: document.getElementById('calendarStartTime').value,
+        calendarEndTime: document.getElementById('calendarEndTime').value,
+        calendarDescription: document.getElementById('calendarDescription').value,
+        calendarPageUrl: document.getElementById('calendarPageUrl').value,
+        contentBlocks: getContentBlocks(),
+        documents: getDocuments(),
+        images: getImages()
+      };
+    }
+
+    function applyFormState(state = {}, options = {}) {
+      const { skipRefresh = false } = options;
+
+      const setValue = (id, fallback = '') => {
+        const el = document.getElementById(id);
+        if (el && state[id] !== undefined) el.value = state[id];
+        else if (el && fallback !== undefined && state[id] === undefined) el.value = fallback;
+      };
+
+      setValue('subject');
+      setValue('previewText');
+      setValue('heroTitle');
+      setValue('clientName');
+      setValue('themeStyle', 'premium');
+      setValue('logoUrl');
+      setValue('showLogo', 'yes');
+      setValue('mailTone', 'pro');
+      setValue('mailContext', 'devis');
+      setValue('assistantPrompt');
+      setValue('aiMode', 'openai');
+      setValue('workerUrl');
+      setValue('bodyText');
+      setValue('calendarTitle');
+      setValue('calendarLocation');
+      setValue('calendarDate');
+      setValue('calendarStartTime');
+      setValue('calendarEndTime');
+      setValue('calendarDescription');
+      setValue('calendarPageUrl');
+
+      const enableCalendarBlock = document.getElementById('enableCalendarBlock');
+      const calendarFields = document.getElementById('calendarFields');
+      enableCalendarBlock.checked = !!state.enableCalendarBlock;
+      calendarFields.style.display = enableCalendarBlock.checked ? 'block' : 'none';
+
+      document.getElementById('contentBlocks').innerHTML = '';
+      (state.contentBlocks || []).forEach(addContentBlock);
+
+      document.getElementById('documents').innerHTML = '';
+      (state.documents || []).forEach(addDocument);
+
+      document.getElementById('images').innerHTML = '';
+      (state.images || []).forEach(addImageItem);
+
+      if (!skipRefresh) refreshPreview();
+    }
+
+    function saveLastState() {
+      try {
+        localStorage.setItem(STORAGE_LAST_STATE_KEY, JSON.stringify(getFormState()));
+      } catch (e) {
+        console.warn('Impossible de sauvegarder l’état courant.', e);
+      }
+    }
+
+    function loadLastState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_LAST_STATE_KEY);
+        if (!raw) return false;
+        const state = JSON.parse(raw);
+        applyFormState(state, { skipRefresh: true });
+        return true;
+      } catch (e) {
+        console.warn('Impossible de relire l’état courant.', e);
+        return false;
+      }
+    }
+
+    function getUserTemplates() {
+      try {
+        const raw = localStorage.getItem(STORAGE_TEMPLATE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveUserTemplates(templates) {
+      localStorage.setItem(STORAGE_TEMPLATE_KEY, JSON.stringify(templates));
+    }
+
+    function getAllTemplates() {
+      return [...builtInTemplates, ...getUserTemplates()];
+    }
+
+    function findTemplateById(id) {
+      return getAllTemplates().find(t => t.id === id);
+    }
+
+    function updateTemplateStatus(message = '') {
+      document.getElementById('templateStatus').textContent = message;
+    }
+
+    function refreshTemplateSelect(selectedId = '') {
+      const select = document.getElementById('templateSelect');
+      const current = selectedId || select.value;
+      const templates = getAllTemplates();
+
+      select.innerHTML = '<option value="">Choisir un template</option>';
+
+      const builtins = templates.filter(t => t.type === 'builtin');
+      const customs = templates.filter(t => t.type === 'custom');
+
+      if (builtins.length) {
+        const group = document.createElement('optgroup');
+        group.label = 'Templates Bâti Azur';
+        builtins.forEach(t => {
+          const option = document.createElement('option');
+          option.value = t.id;
+          option.textContent = `${t.name} · ${t.mode === 'form' ? 'config' : 'html'}`;
+          group.appendChild(option);
+        });
+        select.appendChild(group);
+      }
+
+      if (customs.length) {
+        const group = document.createElement('optgroup');
+        group.label = 'Mes templates';
+        customs.forEach(t => {
+          const option = document.createElement('option');
+          option.value = t.id;
+          option.textContent = `${t.name} · ${t.mode === 'form' ? 'config' : 'html'}`;
+          group.appendChild(option);
+        });
+        select.appendChild(group);
+      }
+
+      if (current && templates.some(t => t.id === current)) {
+        select.value = current;
+      }
+    }
+
+    function saveCurrentTemplate() {
+      const nameInput = document.getElementById('templateNameInput');
+      const mode = document.getElementById('templateMode').value;
+      const name = nameInput.value.trim();
+
+      if (!name) {
+        alert('Renseigne un nom de template.');
+        return;
+      }
+
+      const template = {
+        id: `custom-${Date.now()}`,
+        type: 'custom',
+        mode,
+        name
+      };
+
+      if (mode === 'form') {
+        template.state = getFormState();
+      } else {
+        template.html = buildHtml();
+      }
+
+      const templates = getUserTemplates();
+      templates.push(template);
+      saveUserTemplates(templates);
+      refreshTemplateSelect(template.id);
+      updateTemplateStatus(`Template enregistré : ${name}`);
+    }
+
+    function loadSelectedTemplate() {
+      const id = document.getElementById('templateSelect').value;
+      if (!id) {
+        alert('Choisis un template.');
+        return;
+      }
+
+      const template = findTemplateById(id);
+      if (!template) {
+        alert('Template introuvable.');
+        return;
+      }
+
+      document.getElementById('templateMode').value = template.mode || 'form';
+      document.getElementById('templateNameInput').value = template.name || '';
+
+      if (template.mode === 'form' && template.state) {
+        applyFormState(template.state);
+        updateTemplateStatus(`Template chargé : ${template.name}`);
+        return;
+      }
+
+      if (template.mode === 'html' && template.html) {
+        document.getElementById('htmlOutput').value = template.html;
+        document.getElementById('preview').srcdoc = template.html;
+        updateTemplateStatus(`Template HTML chargé : ${template.name}`);
+        return;
+      }
+
+      alert('Ce template ne contient pas de données exploitables.');
+    }
+
+    function duplicateSelectedTemplate() {
+      const id = document.getElementById('templateSelect').value;
+      if (!id) {
+        alert('Choisis un template à dupliquer.');
+        return;
+      }
+
+      const source = findTemplateById(id);
+      if (!source) {
+        alert('Template introuvable.');
+        return;
+      }
+
+      const copy = JSON.parse(JSON.stringify(source));
+      copy.id = `custom-${Date.now()}`;
+      copy.type = 'custom';
+      copy.name = `${source.name} (copie)`;
+
+      const templates = getUserTemplates();
+      templates.push(copy);
+      saveUserTemplates(templates);
+      refreshTemplateSelect(copy.id);
+      document.getElementById('templateNameInput').value = copy.name;
+      document.getElementById('templateMode').value = copy.mode || 'form';
+      updateTemplateStatus(`Template dupliqué : ${copy.name}`);
+    }
+
+    function deleteSelectedTemplate() {
+      const id = document.getElementById('templateSelect').value;
+      if (!id) {
+        alert('Choisis un template à supprimer.');
+        return;
+      }
+
+      const template = findTemplateById(id);
+      if (!template) {
+        alert('Template introuvable.');
+        return;
+      }
+
+      if (template.type === 'builtin') {
+        alert('Les templates de base ne peuvent pas être supprimés. Duplique-les d’abord si tu veux les modifier.');
+        return;
+      }
+
+      const filtered = getUserTemplates().filter(t => t.id !== id);
+      saveUserTemplates(filtered);
+      refreshTemplateSelect('');
+      updateTemplateStatus(`Template supprimé : ${template.name}`);
+    }
+
     function refreshPreview() {
       const html = buildHtml();
       document.getElementById('htmlOutput').value = html;
       document.getElementById('preview').srcdoc = html;
+      saveLastState();
     }
 
     function copyHtml() {
@@ -1322,39 +1706,52 @@ BÂTI AZUR</textarea>
       win.document.close();
     }
 
-    document.querySelectorAll('input, textarea, select').forEach(el => {
-      el.addEventListener('input', refreshPreview);
-      el.addEventListener('change', refreshPreview);
-    });
-
-    const enableCalendarBlock = document.getElementById('enableCalendarBlock');
-    const calendarFields = document.getElementById('calendarFields');
-
-    enableCalendarBlock.addEventListener('change', () => {
-      calendarFields.style.display = enableCalendarBlock.checked ? 'block' : 'none';
-      refreshPreview();
-    });
-
-    [
-      'calendarTitle',
-      'calendarLocation',
-      'calendarDate',
-      'calendarStartTime',
-      'calendarEndTime',
-      'calendarDescription',
-      'calendarPageUrl',
-      'aiMode',
-      'workerUrl'
-    ].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
+    function bindGlobalFieldEvents() {
+      document.querySelectorAll('input, textarea, select').forEach(el => {
         el.addEventListener('input', refreshPreview);
         el.addEventListener('change', refreshPreview);
-      }
-    });
+      });
 
-    defaultDocs.forEach(addDocument);
-    refreshPreview();
+      const enableCalendarBlock = document.getElementById('enableCalendarBlock');
+      const calendarFields = document.getElementById('calendarFields');
+
+      enableCalendarBlock.addEventListener('change', () => {
+        calendarFields.style.display = enableCalendarBlock.checked ? 'block' : 'none';
+        refreshPreview();
+      });
+
+      document.getElementById('saveTemplateBtn').addEventListener('click', saveCurrentTemplate);
+      document.getElementById('loadTemplateBtn').addEventListener('click', loadSelectedTemplate);
+      document.getElementById('duplicateTemplateBtn').addEventListener('click', duplicateSelectedTemplate);
+      document.getElementById('deleteTemplateBtn').addEventListener('click', deleteSelectedTemplate);
+
+      document.getElementById('templateSelect').addEventListener('change', () => {
+        const template = findTemplateById(document.getElementById('templateSelect').value);
+        if (!template) return;
+        document.getElementById('templateMode').value = template.mode || 'form';
+        document.getElementById('templateNameInput').value = template.name || '';
+      });
+    }
+
+    function initDefaults() {
+      document.getElementById('documents').innerHTML = '';
+      defaultDocs.forEach(addDocument);
+    }
+
+    function initApp() {
+      bindGlobalFieldEvents();
+      refreshTemplateSelect();
+
+      const hasLastState = loadLastState();
+      if (!hasLastState) {
+        initDefaults();
+      }
+
+      refreshPreview();
+      updateTemplateStatus('Templates prêts.');
+    }
+
+    initApp();
   </script>
 </body>
 </html>
