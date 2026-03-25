@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bâti Azur — Générateur de mails HTML</title>
+  <style>
+    :root {
+      --cream: #FDFAEF;
+      --blue-light: #5284CB;
+      --yellow: #FFBE00;
+      --blue-dark: #3E6398;
+      --text: #22324a;
+      --muted: #66758a;
+      --border: #d9dfeb;
+      --soft: #f7f9fc;
+      --card: rgba(255,255,255,0.88);
+      --radius: 18px;
+      --shadow: 0 12px 28px rgba(62, 99, 152, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: linear-gradient(180deg, #f7f9fd 0%, #eef3fb 100%);
+      color: var(--text);
+    }
+
+    .app {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 20px;
+      min-height: 100vh;
+    }
+
+    .panel, .preview-panel {
+      background: var(--card);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(217,223,235,0.95);
+      border-radius: 26px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .section {
+      padding: 22px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section:last-child { border-bottom: 0; }
+
+    .title {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin: 0 0 6px;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.2fr;
+      gap: 12px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 12px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      margin: 0 0 8px;
+      color: #334155;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+      transition: 0.15s ease;
+    }
+
+    input[type="color"] {
+      padding: 4px;
+      height: 46px;
+      min-width: 70px;
+      cursor: pointer;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: rgba(82, 132, 203, 0.45);
+      box-shadow: 0 0 0 4px rgba(82, 132, 203, 0.08);
+    }
+
+    textarea { min-height: 120px; resize: vertical; }
+
+    .actions, .inline-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.18s ease;
+    }
+
+    button:hover { transform: translateY(-1px); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--blue-light), var(--blue-dark));
+      color: #fff;
+    }
+
+    .btn-secondary {
+      background: #eaf0fa;
+      color: #173055;
+    }
+
+    .btn-accent {
+      background: var(--yellow);
+      color: #243349;
+    }
+
+    .btn-dark {
+      background: var(--blue-dark);
+      color: #fff;
+    }
+
+    .btn-danger {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .hint {
+      margin-top: 10px;
+      padding: 12px 14px;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      font-size: 13px;
+      color: #475569;
+      line-height: 1.6;
+    }
+
+    .doc-item, .image-item, .block-item {
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 18px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    .doc-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .doc-top strong { font-size: 15px; }
+
+    .preview-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(253,250,239,0.92);
+    }
+
+    .preview-frame {
+      width: 100%;
+      height: calc(100vh - 130px);
+      border: 0;
+      background: #fff;
+    }
+
+    .mini {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .assistant-box {
+      background: linear-gradient(135deg, rgba(82,132,203,0.08), rgba(255,190,0,0.10));
+      border: 1px solid rgba(82,132,203,0.12);
+      border-radius: 18px;
+      padding: 14px;
+    }
+
+    .code-output {
+      width: 100%;
+      min-height: 220px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #edf4ff;
+      color: var(--blue-dark);
+    }
+
+    .palette {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .swatch {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: #fff;
+      border: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--blue-dark);
+    }
+
+    .swatch-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,0.08);
+      flex: 0 0 auto;
+    }
+
+    .upload-preview {
+      display: block;
+      max-width: 180px;
+      max-height: 90px;
+      width: auto;
+      height: auto;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      object-fit: contain;
+    }
+
+    .warning {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: #fff8e7;
+      border: 1px solid #f7d77a;
+      color: #6f5607;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 1080px) {
+      .app { grid-template-columns: 1fr; }
+      .preview-frame { height: 70vh; }
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="panel">
+      <div class="section">
+        <h1 class="title">Bâti Azur — Générateur de mails HTML</h1>
+        <p class="subtitle">Version simple à ouvrir dans Chrome. Couleurs alignées sur la charte, génération de boutons Google Drive, copie du message pour collage direct dans Gmail, assistant de rédaction local et blocs type newsletter.</p>
+        <div class="palette">
+          <div class="swatch"><span class="swatch-dot" style="background:#FDFAEF"></span>FDFAEF</div>
+          <div class="swatch"><span class="swatch-dot" style="background:#5284CB"></span>5284CB</div>
+          <div class="swatch"><span class="swatch-dot" style="background:#FFBE00"></span>FFBE00</div>
+          <div class="swatch"><span class="swatch-dot" style="background:#3E6398"></span>3E6398</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>1. Informations du mail</h2>
+        <div class="grid-2">
+          <div>
+            <label for="subject">Objet</label>
+            <input id="subject" value="Facture remise en route et remplacement du sable + documentation commande à distance" />
+          </div>
+          <div>
+            <label for="previewText">Preview text</label>
+            <input id="previewText" value="Facture de remise en route et documentation sur le système de pilotage à distance de votre piscine." />
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:12px;">
+          <div>
+            <label for="heroTitle">Titre principal</label>
+            <input id="heroTitle" value="Envoi de votre facture et documentation complémentaire" />
+          </div>
+          <div>
+            <label for="clientName">Nom du client</label>
+            <input id="clientName" value="Luc Beaunée" />
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:12px;">
+          <div>
+            <label for="themeStyle">Style visuel</label>
+            <select id="themeStyle">
+              <option value="premium">Premium Bâti Azur</option>
+              <option value="clean">Clair et sobre</option>
+              <option value="accent">Accent jaune</option>
+            </select>
+          </div>
+          <div>
+            <label for="logoUrl">URL logo public</label>
+            <input id="logoUrl" value="https://i.postimg.cc/zvMsNs5r/logo_bleu.png" placeholder="https://.../logo.png" />
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:12px;">
+          <div>
+            <label for="showLogo">Logo dans le mail</label>
+            <select id="showLogo">
+              <option value="yes" selected>Afficher le logo</option>
+              <option value="no">Masquer le logo</option>
+            </select>
+          </div>
+          <div>
+            <label>Logo par défaut</label>
+            <div class="hint" style="margin-top:0;">Le logo utilisé par défaut est celui repris sur les mails générés pour la newsletter.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>2. Assistant texte</h2>
+        <div class="assistant-box">
+          <div class="grid-2">
+            <div>
+              <label for="mailTone">Ton</label>
+              <select id="mailTone">
+                <option value="pro">Professionnel</option>
+                <option value="premium">Premium</option>
+                <option value="simple">Simple</option>
+                <option value="commercial">Commercial</option>
+              </select>
+            </div>
+            <div>
+              <label for="mailContext">Type de message</label>
+              <select id="mailContext">
+                <option value="devis">Devis</option>
+                <option value="facture">Facture</option>
+                <option value="relance">Relance</option>
+                <option value="contact">Contact</option>
+                <option value="documents">Envoi de documents</option>
+                <option value="info">Info</option>
+                <option value="autre">Autre</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:12px;">
+            <label for="assistantPrompt">Consignes / éléments à intégrer</label>
+            <textarea id="assistantPrompt">Dire que c'est la facture de la remise en route et du changement de sable, et que je joins la documentation du système de commande à distance avec le Pool Command et le flotteur d’analyse.</textarea>
+          </div>
+          <div class="actions" style="margin-top:12px;">
+            <button class="btn-primary" onclick="generateTextFromAssistant()">Générer le texte</button>
+            <button class="btn-secondary" onclick="insertGreeting()">Ajouter une formule d’appel</button>
+          </div>
+          <div class="hint">Cette version embarque un assistant de rédaction local basé sur des modèles intelligents. Pour une vraie IA complète, on pourra ensuite brancher l’API OpenAI avec ta clé.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>3. Texte principal du mail</h2>
+        <label for="bodyText">Contenu</label>
+        <textarea id="bodyText">Bonjour Monsieur Beaunée,
+
+Veuillez trouver ci-joint la facture concernant la remise en route de votre piscine ainsi que le remplacement du sable.
+
+Nous vous transmettons également la documentation relative au système de commande de la piscine à distance, permettant un pilotage plus simple, plus confortable et un meilleur suivi de votre installation.
+
+Nous restons bien entendu à votre disposition pour toute question concernant cette facture ou les solutions de commande à distance pour votre piscine.
+
+Cordialement,
+BÂTI AZUR</textarea>
+      </div>
+
+      <div class="section">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+          <h2 style="margin:0;">4. Blocs newsletter</h2>
+          <button class="btn-secondary" onclick="addContentBlock()">+ Ajouter un bloc</button>
+        </div>
+        <div id="contentBlocks"></div>
+        <div class="hint">Chaque bloc peut contenir un titre, un texte, une image et jusqu’à deux boutons personnalisés.</div>
+      </div>
+
+      <div class="section">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+          <h2 style="margin:0;">5. Boutons de téléchargement</h2>
+          <button class="btn-secondary" onclick="addDocument()">+ Ajouter un bouton</button>
+        </div>
+        <div id="documents"></div>
+        <div class="hint">Tu peux choisir une couleur de la charte ou utiliser le sélecteur <strong>hors charte</strong>.</div>
+      </div>
+
+      <div class="section">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+          <h2 style="margin:0;">6. Images libres</h2>
+          <button class="btn-secondary" onclick="addImageItem()">+ Ajouter une image</button>
+        </div>
+        <div id="images"></div>
+        <div class="warning">Oui, on peut ajouter une interface d’upload pour préparer le visuel. En revanche, pour un affichage fiable chez les destinataires, les images doivent idéalement être hébergées sur une URL publique HTTPS. Les images encodées directement dans le HTML du mail peuvent mal passer dans Gmail ou certains clients mail.</div>
+      </div>
+
+      <div class="section">
+        <h2>7. Actions</h2>
+        <div class="actions">
+          <button class="btn-primary" onclick="refreshPreview()">Actualiser l’aperçu</button>
+          <button class="btn-accent" onclick="copyRenderedMessage()">Copier le message</button>
+          <button class="btn-secondary" onclick="copyHtml()">Copier le HTML</button>
+          <button class="btn-dark" onclick="downloadHtml()">Télécharger le fichier HTML</button>
+          <button class="btn-secondary" onclick="copySubject()">Copier l’objet</button>
+        </div>
+        <div class="hint">Le bouton <strong>Copier le message</strong> essaie de copier directement la version riche pour collage dans Gmail. Selon Chrome et le contexte local, ça peut être bloqué. Dans ce cas, utilise l’aperçu seul puis copie-colle visuellement, ou le HTML.</div>
+      </div>
+
+      <div class="section">
+        <h2>8. Code HTML</h2>
+        <textarea id="htmlOutput" class="code-output"></textarea>
+      </div>
+    </div>
+
+    <div class="preview-panel">
+      <div class="preview-toolbar">
+        <div>
+          <div class="badge">Aperçu du mail</div>
+          <div class="mini" style="margin-top:6px;">Rendu visuel du HTML généré</div>
+        </div>
+        <div class="inline-actions">
+          <button class="btn-secondary" onclick="openStandalonePreview()">Ouvrir l’aperçu seul</button>
+        </div>
+      </div>
+      <iframe id="preview" class="preview-frame"></iframe>
+    </div>
+  </div>
+
+  <script>
+    const defaultDocs = [
+      {
+        label: 'Télécharger la facture',
+        url: 'https://drive.google.com/file/d/1c33QzPCmYOcrGEckRJcB7bHGggOeA_iZ/view?usp=sharing',
+        colorMode: 'preset',
+        color: 'lightblue',
+        customColor: '#5284CB'
+      },
+      {
+        label: 'Télécharger Pool Command',
+        url: 'https://drive.google.com/file/d/1XdveSBITaT2U43PHTtV4qcY8ylqwgPx4/view?usp=sharing',
+        colorMode: 'preset',
+        color: 'darkblue',
+        customColor: '#3E6398'
+      },
+      {
+        label: 'Télécharger Flotteur d’analyse',
+        url: 'https://drive.google.com/file/d/1JmqzWQo3Vc5YOEHUoe2oQtW3Dj-ZJwS-/view?usp=sharing',
+        colorMode: 'preset',
+        color: 'yellow',
+        customColor: '#FFBE00'
+      }
+    ];
+
+    const presetColors = {
+      cream: '#FDFAEF',
+      lightblue: '#5284CB',
+      yellow: '#FFBE00',
+      darkblue: '#3E6398'
+    };
+
+    function escapeHtml(str = '') {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function nl2br(str = '') {
+      return escapeHtml(str).replace(/\n/g, '<br>');
+    }
+
+    function extractGoogleDriveId(url = '') {
+      const patterns = [
+        /\/file\/d\/([^/]+)/,
+        /[?&]id=([^&]+)/,
+        /\/d\/([^/]+)/,
+      ];
+      for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match && match[1]) return match[1];
+      }
+      return '';
+    }
+
+    function toDirectDownloadUrl(url = '') {
+      const id = extractGoogleDriveId(url.trim());
+      if (!id) return url.trim();
+      return `https://drive.google.com/uc?export=download&id=${id}`;
+    }
+
+    function resolveColor(mode, preset, custom) {
+      if (mode === 'custom') return custom || '#5284CB';
+      return presetColors[preset] || '#5284CB';
+    }
+
+    function getButtonTextColor(bg) {
+      const hex = bg.replace('#', '');
+      if (hex.length !== 6) return '#ffffff';
+      const r = parseInt(hex.substring(0,2),16);
+      const g = parseInt(hex.substring(2,4),16);
+      const b = parseInt(hex.substring(4,6),16);
+      const luminance = (0.299*r + 0.587*g + 0.114*b) / 255;
+      return luminance > 0.7 ? '#243349' : '#ffffff';
+    }
+
+    function getThemeTokens() {
+      const style = document.getElementById('themeStyle').value;
+      if (style === 'clean') {
+        return {
+          bg: '#f4f7fb',
+          card: '#ffffff',
+          headerBg: '#FDFAEF',
+          headerText: '#3E6398',
+          subText: '#5284CB',
+          footerBg: '#f8fafc'
+        };
+      }
+      if (style === 'accent') {
+        return {
+          bg: '#fffaf0',
+          card: '#ffffff',
+          headerBg: 'linear-gradient(135deg, #FFBE00 0%, #5284CB 100%)',
+          headerText: '#ffffff',
+          subText: '#fff7db',
+          footerBg: '#fffaf0'
+        };
+      }
+      return {
+        bg: '#eef3f9',
+        card: '#ffffff',
+        headerBg: 'linear-gradient(135deg, #5284CB 0%, #3E6398 100%)',
+        headerText: '#ffffff',
+        subText: '#e4eeff',
+        footerBg: '#f8fafc'
+      };
+    }
+
+    function addContentBlock(block = { title: '', text: '', imageUrl: '', imageAlt: 'Illustration', button1Label: '', button1Url: '', button2Label: '', button2Url: '' }) {
+      const container = document.getElementById('contentBlocks');
+      const wrapper = document.createElement('div');
+      wrapper.className = 'block-item';
+      wrapper.innerHTML = `
+        <div class="doc-top">
+          <strong>Bloc contenu</strong>
+          <button class="btn-danger" type="button">Supprimer</button>
+        </div>
+        <div class="grid-2">
+          <div>
+            <label>Titre du bloc</label>
+            <input class="cb-title" value="${escapeHtml(block.title)}">
+          </div>
+          <div>
+            <label>Image URL</label>
+            <input class="cb-image-url" value="${escapeHtml(block.imageUrl)}" placeholder="https://.../image.jpg">
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:12px;">
+          <div>
+            <label>Texte</label>
+            <textarea class="cb-text" style="min-height:140px;">${escapeHtml(block.text)}</textarea>
+          </div>
+          <div>
+            <label>Texte alternatif image</label>
+            <input class="cb-image-alt" value="${escapeHtml(block.imageAlt)}">
+            <div style="height:12px;"></div>
+            <label>Ou charger une image locale</label>
+            <input type="file" class="cb-file" accept="image/*">
+            <img class="upload-preview cb-preview" style="display:${block.imageUrl ? 'block' : 'none'}; margin-top:12px;" ${block.imageUrl ? `src="${escapeHtml(block.imageUrl)}"` : ''} alt="aperçu bloc" />
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:12px;">
+          <div>
+            <label>Bouton 1 — libellé</label>
+            <input class="cb-b1-label" value="${escapeHtml(block.button1Label)}" placeholder="En savoir plus">
+          </div>
+          <div>
+            <label>Bouton 1 — lien</label>
+            <input class="cb-b1-url" value="${escapeHtml(block.button1Url)}" placeholder="https://...">
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:12px;">
+          <div>
+            <label>Bouton 2 — libellé</label>
+            <input class="cb-b2-label" value="${escapeHtml(block.button2Label)}" placeholder="Télécharger">
+          </div>
+          <div>
+            <label>Bouton 2 — lien</label>
+            <input class="cb-b2-url" value="${escapeHtml(block.button2Url)}" placeholder="https://...">
+          </div>
+        </div>
+      `;
+
+      wrapper.querySelector('.btn-danger').onclick = () => {
+        wrapper.remove();
+        refreshPreview();
+      };
+
+      wrapper.querySelectorAll('input, textarea').forEach(el => {
+        el.addEventListener('input', refreshPreview);
+        el.addEventListener('change', refreshPreview);
+      });
+
+      wrapper.querySelector('.cb-file').addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          wrapper.querySelector('.cb-image-url').value = reader.result;
+          const img = wrapper.querySelector('.cb-preview');
+          img.src = reader.result;
+          img.style.display = 'block';
+          refreshPreview();
+        };
+        reader.readAsDataURL(file);
+      });
+
+      container.appendChild(wrapper);
+      refreshPreview();
+    }
+
+    function addDocument(doc = { label: '', url: '', colorMode: 'preset', color: 'lightblue', customColor: '#5284CB' }) {
+      const container = document.getElementById('documents');
+      const wrapper = document.createElement('div');
+      wrapper.className = 'doc-item';
+      wrapper.innerHTML = `
+        <div class="doc-top">
+          <strong>Bouton document</strong>
+          <button class="btn-danger" type="button">Supprimer</button>
+        </div>
+        <div class="grid-3">
+          <div>
+            <label>Libellé</label>
+            <input class="doc-label" value="${escapeHtml(doc.label)}">
+          </div>
+          <div>
+            <label>Lien</label>
+            <input class="doc-url" value="${escapeHtml(doc.url)}">
+          </div>
+          <div>
+            <label>Couleur</label>
+            <select class="doc-color-mode">
+              <option value="preset" ${doc.colorMode === 'preset' ? 'selected' : ''}>Charte graphique</option>
+              <option value="custom" ${doc.colorMode === 'custom' ? 'selected' : ''}>Hors charte</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid-3" style="margin-top:12px;">
+          <div>
+            <label>Couleur charte</label>
+            <select class="doc-color-preset">
+              <option value="cream" ${doc.color === 'cream' ? 'selected' : ''}>Ivoire — FDFAEF</option>
+              <option value="lightblue" ${doc.color === 'lightblue' ? 'selected' : ''}>Bleu clair — 5284CB</option>
+              <option value="yellow" ${doc.color === 'yellow' ? 'selected' : ''}>Jaune — FFBE00</option>
+              <option value="darkblue" ${doc.color === 'darkblue' ? 'selected' : ''}>Bleu foncé — 3E6398</option>
+            </select>
+          </div>
+          <div>
+            <label>Hors charte</label>
+            <input type="color" class="doc-color-custom" value="${escapeHtml(doc.customColor || '#5284CB')}">
+          </div>
+          <div>
+            <label>Aperçu couleur</label>
+            <div class="swatch" style="height:46px; border-radius:14px;"><span class="swatch-dot doc-color-preview" style="width:24px;height:24px;background:${resolveColor(doc.colorMode, doc.color, doc.customColor)}"></span><span class="doc-color-preview-text">${resolveColor(doc.colorMode, doc.color, doc.customColor)}</span></div>
+          </div>
+        </div>
+        <div class="inline-actions" style="margin-top:12px;">
+          <button class="btn-secondary convert-btn" type="button">Convertir en lien direct</button>
+        </div>
+      `;
+
+      const removeBtn = wrapper.querySelector('.btn-danger');
+      removeBtn.onclick = () => {
+        wrapper.remove();
+        refreshPreview();
+      };
+
+      const convertBtn = wrapper.querySelector('.convert-btn');
+      convertBtn.onclick = () => {
+        const input = wrapper.querySelector('.doc-url');
+        input.value = toDirectDownloadUrl(input.value);
+        refreshPreview();
+      };
+
+      const updatePreview = () => {
+        const mode = wrapper.querySelector('.doc-color-mode').value;
+        const preset = wrapper.querySelector('.doc-color-preset').value;
+        const custom = wrapper.querySelector('.doc-color-custom').value;
+        const color = resolveColor(mode, preset, custom);
+        wrapper.querySelector('.doc-color-preview').style.background = color;
+        wrapper.querySelector('.doc-color-preview-text').textContent = color;
+      };
+
+      wrapper.querySelectorAll('input, select').forEach(el => {
+        el.addEventListener('input', () => { updatePreview(); refreshPreview(); });
+        el.addEventListener('change', () => { updatePreview(); refreshPreview(); });
+      });
+
+      container.appendChild(wrapper);
+      updatePreview();
+      refreshPreview();
+    }
+
+    function addImageItem() {
+      const container = document.getElementById('images');
+      const wrapper = document.createElement('div');
+      wrapper.className = 'image-item';
+      wrapper.innerHTML = `
+        <div class="doc-top">
+          <strong>Image</strong>
+          <button class="btn-danger" type="button">Supprimer</button>
+        </div>
+        <div class="grid-2">
+          <div>
+            <label>URL publique HTTPS</label>
+            <input class="img-url" placeholder="https://.../image.jpg">
+          </div>
+          <div>
+            <label>Texte alternatif</label>
+            <input class="img-alt" value="Illustration">
+          </div>
+        </div>
+        <div class="grid-2" style="margin-top:12px; align-items:end;">
+          <div>
+            <label>Ou charger une image locale</label>
+            <input type="file" class="img-file" accept="image/*">
+          </div>
+          <div>
+            <img class="upload-preview" style="display:none;" alt="aperçu image" />
+          </div>
+        </div>
+      `;
+
+      wrapper.querySelector('.btn-danger').onclick = () => {
+        wrapper.remove();
+        refreshPreview();
+      };
+
+      wrapper.querySelectorAll('input').forEach(el => {
+        el.addEventListener('input', refreshPreview);
+        el.addEventListener('change', refreshPreview);
+      });
+
+      wrapper.querySelector('.img-file').addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          wrapper.querySelector('.img-url').value = reader.result;
+          const img = wrapper.querySelector('.upload-preview');
+          img.src = reader.result;
+          img.style.display = 'block';
+          refreshPreview();
+        };
+        reader.readAsDataURL(file);
+      });
+
+      container.appendChild(wrapper);
+      refreshPreview();
+    }
+
+    function getDocuments() {
+      return Array.from(document.querySelectorAll('.doc-item')).map(item => ({
+        label: item.querySelector('.doc-label').value.trim(),
+        url: item.querySelector('.doc-url').value.trim(),
+        color: resolveColor(
+          item.querySelector('.doc-color-mode').value,
+          item.querySelector('.doc-color-preset').value,
+          item.querySelector('.doc-color-custom').value
+        )
+      })).filter(d => d.label || d.url);
+    }
+
+    function getImages() {
+      return Array.from(document.querySelectorAll('.image-item')).map(item => ({
+        url: item.querySelector('.img-url').value.trim(),
+        alt: item.querySelector('.img-alt').value.trim() || 'Illustration'
+      })).filter(i => i.url);
+    }
+
+    function getContentBlocks() {
+      return Array.from(document.querySelectorAll('.block-item')).map(item => ({
+        title: item.querySelector('.cb-title').value.trim(),
+        text: item.querySelector('.cb-text').value.trim(),
+        imageUrl: item.querySelector('.cb-image-url').value.trim(),
+        imageAlt: item.querySelector('.cb-image-alt').value.trim() || 'Illustration',
+        button1Label: item.querySelector('.cb-b1-label').value.trim(),
+        button1Url: item.querySelector('.cb-b1-url').value.trim(),
+        button2Label: item.querySelector('.cb-b2-label').value.trim(),
+        button2Url: item.querySelector('.cb-b2-url').value.trim()
+      })).filter(b => b.title || b.text || b.imageUrl || b.button1Label || b.button2Label);
+    }
+
+    function generateTextFromAssistant() {
+      const clientName = document.getElementById('clientName').value.trim();
+      const tone = document.getElementById('mailTone').value;
+      const context = document.getElementById('mailContext').value;
+      const prompt = document.getElementById('assistantPrompt').value.trim();
+      const docs = getDocuments().map(d => d.label.replace(/^Télécharger\s+/i, '')).filter(Boolean);
+
+      const greeting = clientName ? `Bonjour Monsieur ${clientName.replace(/^Monsieur\s+/i, '').replace(/^Madame\s+/i, '')},` : 'Bonjour,';
+
+      let intro = '';
+      let body = '';
+      let ending = '';
+
+      if (context === 'facture') {
+        intro = 'Veuillez trouver ci-joint la facture relative à votre dossier.';
+        body = docs.length ? `Nous vous transmettons également les documents suivants : ${docs.join(', ')}.` : 'Nous vous transmettons également les éléments complémentaires utiles à votre installation.';
+      } else if (context === 'devis') {
+        intro = 'Veuillez trouver ci-joint notre devis relatif à votre projet.';
+        body = docs.length ? `Vous retrouverez également les documents suivants : ${docs.join(', ')}.` : 'Vous retrouverez également la documentation utile concernant les équipements évoqués.';
+      } else if (context === 'relance') {
+        intro = 'Nous revenons vers vous concernant notre précédent envoi.';
+        body = 'Sauf erreur de notre part, nous restons dans l’attente de votre retour.';
+      } else if (context === 'contact') {
+        intro = 'Nous faisons suite à notre échange concernant votre projet.';
+        body = 'Vous trouverez ci-dessous les éléments utiles relatifs à votre demande.';
+      } else if (context === 'documents') {
+        intro = 'Veuillez trouver ci-joint les documents demandés.';
+        body = docs.length ? `Vous pouvez retrouver les documents suivants : ${docs.join(', ')}.` : 'Nous vous transmettons ci-joint les éléments utiles à votre dossier.';
+      } else if (context === 'info') {
+        intro = 'Nous vous contactons afin de vous transmettre une information utile concernant votre installation.';
+        body = docs.length ? `Vous pouvez également consulter les documents suivants : ${docs.join(', ')}.` : 'Vous trouverez ci-dessous les éléments utiles.';
+      } else {
+        intro = 'Nous vous adressons ce message afin de vous transmettre les éléments utiles relatifs à votre installation.';
+        body = docs.length ? `Vous pouvez retrouver les documents suivants : ${docs.join(', ')}.` : 'Vous trouverez ci-dessous les éléments utiles.';
+      }
+
+      if (tone === 'premium') {
+        ending = 'Nous restons bien entendu à votre disposition pour tout complément d’information et pour vous accompagner dans le suivi de votre piscine.';
+      } else if (tone === 'commercial') {
+        ending = 'Nous restons à votre disposition pour vous conseiller sur la solution la plus confortable et la plus adaptée à votre installation.';
+      } else if (tone === 'simple') {
+        ending = 'Nous restons à votre disposition si besoin.';
+      } else {
+        ending = 'Nous restons bien entendu à votre disposition pour toute question complémentaire.';
+      }
+
+      const extra = prompt ? `\n\n${prompt.charAt(0).toUpperCase() + prompt.slice(1)}` : '';
+      const finalText = `${greeting}\n\n${intro}\n\n${body}${extra}\n\n${ending}\n\nCordialement,\nBÂTI AZUR`;
+      document.getElementById('bodyText').value = finalText;
+      refreshPreview();
+    }
+
+    function insertGreeting() {
+      const clientName = document.getElementById('clientName').value.trim();
+      const textarea = document.getElementById('bodyText');
+      const greeting = clientName ? `Bonjour Monsieur ${clientName.replace(/^Monsieur\s+/i, '').replace(/^Madame\s+/i, '')},\n\n` : 'Bonjour,\n\n';
+      if (!textarea.value.startsWith('Bonjour')) {
+        textarea.value = greeting + textarea.value;
+        refreshPreview();
+      }
+    }
+
+    function buildButtonsHtml(documents) {
+      return documents.map(doc => {
+        const textColor = getButtonTextColor(doc.color);
+        return `
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px 0;">
+          <tr>
+            <td align="center" bgcolor="${doc.color}" style="border-radius:12px;">
+              <a href="${escapeHtml(doc.url)}" target="_blank" style="display:inline-block; padding:15px 24px; font-size:15px; font-weight:700; color:${textColor}; text-decoration:none; border-radius:12px;">${escapeHtml(doc.label)}</a>
+            </td>
+          </tr>
+        </table>`;
+      }).join('\n');
+    }
+
+    function buildImagesHtml(images) {
+      return images.map(img => `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 18px 0;">
+          <tr>
+            <td>
+              <img src="${escapeHtml(img.url)}" alt="${escapeHtml(img.alt)}" style="display:block; max-width:100%; width:100%; height:auto; border-radius:14px; border:0; outline:none; text-decoration:none;" />
+            </td>
+          </tr>
+        </table>`).join('\n');
+    }
+
+    function buildContentBlocksHtml(blocks) {
+      return blocks.map(block => {
+        const b1 = block.button1Label && block.button1Url ? `
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="display:inline-block; margin:8px 10px 0 0;">
+            <tr><td align="center" bgcolor="#5284CB" style="border-radius:12px;"><a href="${escapeHtml(block.button1Url)}" target="_blank" style="display:inline-block; padding:13px 20px; font-size:14px; font-weight:700; color:#ffffff; text-decoration:none; border-radius:12px;">${escapeHtml(block.button1Label)}</a></td></tr>
+          </table>` : '';
+        const b2 = block.button2Label && block.button2Url ? `
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="display:inline-block; margin:8px 10px 0 0;">
+            <tr><td align="center" bgcolor="#3E6398" style="border-radius:12px;"><a href="${escapeHtml(block.button2Url)}" target="_blank" style="display:inline-block; padding:13px 20px; font-size:14px; font-weight:700; color:#ffffff; text-decoration:none; border-radius:12px;">${escapeHtml(block.button2Label)}</a></td></tr>
+          </table>` : '';
+        return `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 24px 0; border:1px solid #e7edf5; border-radius:18px; overflow:hidden; background:#ffffff;">
+          ${block.imageUrl ? `<tr><td><img src="${escapeHtml(block.imageUrl)}" alt="${escapeHtml(block.imageAlt)}" style="display:block; max-width:100%; width:100%; height:auto; border:0;" /></td></tr>` : ''}
+          <tr>
+            <td style="padding:22px 22px 20px 22px;">
+              ${block.title ? `<h2 style="margin:0 0 12px 0; font-size:22px; line-height:1.3; color:#3E6398; font-weight:700;">${escapeHtml(block.title)}</h2>` : ''}
+              ${block.text ? `<p style="margin:0; font-size:15px; line-height:1.8; color:#4b5d75;">${nl2br(block.text)}</p>` : ''}
+              ${(b1 || b2) ? `<div style="margin-top:16px;">${b1}${b2}</div>` : ''}
+            </td>
+          </tr>
+        </table>`;
+      }).join('\n');
+    }
+
+    function buildHtml() {
+      const subject = document.getElementById('subject').value.trim();
+      const previewText = document.getElementById('previewText').value.trim();
+      const heroTitle = document.getElementById('heroTitle').value.trim();
+      const bodyText = document.getElementById('bodyText').value;
+      const logoUrl = document.getElementById('logoUrl').value.trim();
+      const showLogo = document.getElementById('showLogo').value === 'yes';
+      const documents = getDocuments();
+      const images = getImages();
+      const contentBlocks = getContentBlocks();
+      const buttonsHtml = buildButtonsHtml(documents);
+      const imagesHtml = buildImagesHtml(images);
+      const contentBlocksHtml = buildContentBlocksHtml(contentBlocks);
+      const theme = getThemeTokens();
+      const logoHtml = showLogo && logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="Bâti Azur" style="display:block; max-width:160px; width:auto; height:auto; margin:0 0 14px 0; border:0;" />` : '';
+
+      return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escapeHtml(subject || 'Email Bâti Azur')}</title>
+</head>
+<body style="margin:0; padding:0; background-color:${theme.bg}; font-family:Arial, Helvetica, sans-serif; color:#22324a;">
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0;">${escapeHtml(previewText)}</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:${theme.bg}; margin:0; padding:0;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:700px; background-color:${theme.card}; border-radius:18px; overflow:hidden;">
+          <tr>
+            <td style="padding:0; background:${theme.headerBg};">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="padding:34px 34px 28px 34px; background-image:radial-gradient(circle at top right, rgba(255,255,255,0.12) 0, rgba(255,255,255,0) 38%);">
+                    ${logoHtml}
+                    <h1 style="margin:0; font-size:28px; line-height:1.25; color:${theme.headerText}; font-weight:700;">${escapeHtml(heroTitle)}</h1>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:36px 34px 18px 34px;">
+              ${imagesHtml}
+              <p style="margin:0 0 24px 0; font-size:16px; line-height:1.8; color:#41536d;">${nl2br(bodyText)}</p>
+              ${contentBlocksHtml}
+              ${buttonsHtml}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 34px; background-color:${theme.footerBg}; border-top:1px solid #e5e7eb;">
+              <p style="margin:0; font-size:12px; line-height:1.7; color:#6b7a90;">Les documents sont accessibles via les boutons de téléchargement ci-dessus.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+    }
+
+    function refreshPreview() {
+      const html = buildHtml();
+      document.getElementById('htmlOutput').value = html;
+      document.getElementById('preview').srcdoc = html;
+    }
+
+    function copyHtml() {
+      navigator.clipboard.writeText(document.getElementById('htmlOutput').value);
+    }
+
+    async function copyRenderedMessage() {
+      const html = document.getElementById('htmlOutput').value;
+      const plain = document.getElementById('bodyText').value;
+      try {
+        if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+          const item = new ClipboardItem({
+            'text/html': new Blob([html], { type: 'text/html' }),
+            'text/plain': new Blob([plain], { type: 'text/plain' })
+          });
+          await navigator.clipboard.write([item]);
+          alert('Message riche copié. Essaie maintenant de le coller directement dans Gmail.');
+        } else {
+          throw new Error('Clipboard API non disponible');
+        }
+      } catch (e) {
+        alert('Copie riche bloquée par le navigateur dans ce contexte. Utilise “Ouvrir l’aperçu seul”, puis copie-colle visuellement dans Gmail, ou copie le HTML.');
+      }
+    }
+
+    function copySubject() {
+      navigator.clipboard.writeText(document.getElementById('subject').value);
+    }
+
+    function downloadHtml() {
+      const html = document.getElementById('htmlOutput').value;
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'email-bati-azur.html';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function openStandalonePreview() {
+      const win = window.open('', '_blank');
+      win.document.open();
+      win.document.write(document.getElementById('htmlOutput').value);
+      win.document.close();
+    }
+
+    document.querySelectorAll('input, textarea, select').forEach(el => {
+      el.addEventListener('input', refreshPreview);
+      el.addEventListener('change', refreshPreview);
+    });
+
+    defaultDocs.forEach(addDocument);
+    refreshPreview();
+  </script>
+</body>
+</html>
